@@ -436,6 +436,164 @@ function go(i) {
 }
 
 
+function getBase() {
+  const t = document.getElementById('baseText').value.trim();
+  if (t.length < 80) {
+    alert('Pega o carga un enunciado base con suficiente detalle (al menos unas pocas líneas).');
+    return null;
+  }
+  return t;
+}
+
+function loadDemo() {
+  const el = document.getElementById('baseText');
+  if (!el) { alert('No se encuentra el campo de enunciado.'); return; }
+  el.value = DEMO_BASE;
+  const msg = document.getElementById('fileMsg');
+  if (msg) {
+    msg.innerHTML = '<div class="msg msg-ok"><i class="ti ti-check"></i> Ejemplo de cinta transportadora cargado (puedes editarlo).</div>';
+  }
+  el.focus();
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+async function handleDocx(ev) {
+  const file = ev.target.files && ev.target.files[0];
+  ev.target.value = '';
+  if (!file) return;
+  const msg = document.getElementById('fileMsg');
+  if (!window.mammoth) {
+    if (msg) msg.innerHTML = '<div class="msg msg-warn"><i class="ti ti-alert-triangle"></i> No se pudo cargar el lector de Word. Pega el texto manualmente.</div>';
+    return;
+  }
+  if (msg) msg.innerHTML = '<div class="msg msg-info"><i class="ti ti-loader"></i> Leyendo Word…</div>';
+  try {
+    const buf = await file.arrayBuffer();
+    const result = await mammoth.extractRawText({ arrayBuffer: buf });
+    document.getElementById('baseText').value = result.value.trim();
+    if (msg) msg.innerHTML = '<div class="msg msg-ok"><i class="ti ti-check"></i> Texto extraído de «' + esc(file.name) + '» (' + result.value.trim().length + ' caracteres).</div>';
+  } catch (e) {
+    if (msg) msg.innerHTML = '<div class="msg msg-warn"><i class="ti ti-alert-triangle"></i> Error: ' + esc(e.message) + '</div>';
+  }
+}
+
+function selectStyle(el) {
+  document.querySelectorAll('.style-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedStyle = el.dataset.style;
+}
+
+function syncModel() {
+  const p = document.getElementById('aiProvider').value;
+  const m = document.getElementById('aiModel');
+  if (p === 'openai') m.value = 'gpt-6-luna';
+  else if (p === 'google') m.value = 'gemini-2.0-flash';
+  else m.value = 'claude-3-5-haiku-20241022';
+}
+
+function updateSummary() {
+  const n = document.getElementById('numEnunciados').value;
+  const vars = document.getElementById('cambiaVars').value === 'si' ? 'SÍ se cambian' : 'NO se cambian';
+  const styleNames = { formal: 'FORMAL', semi: 'SEMI-INFORMAL', muy: 'MUY INFORMAL (Paco)' };
+  const len = (document.getElementById('baseText').value || '').length;
+  const box = document.getElementById('summaryBox');
+  if (box) {
+    box.innerHTML = '<i class="ti ti-list-check"></i><div><strong>Resumen:</strong> ' + n + ' enunciados · estilo <strong>' +
+      styleNames[selectedStyle] + '</strong> · variables: <strong>' + vars + '</strong> · base: ' + len + ' caracteres.</div>';
+  }
+}
+
+function buildPrompt() {
+  const doc1 = getBase();
+  if (!doc1) return null;
+  const num = parseInt(document.getElementById('numEnunciados').value, 10) || 3;
+  const estilo = STYLES[selectedStyle];
+  const cambia = document.getElementById('cambiaVars').value === 'si'
+    ? 'Cambia los nombres de las variables respecto a los usados en el enunciado base (nombres de sensores y actuadores).'
+    : 'Usa los mismos nombres para las variables que en el enunciado base (los mismos nombres para sensores y actuadores).';
+
+  return `Eres un profesor de universidad experto en la asignatura Automatización Industrial en el Grado en Ingeniería Eléctrica en una universidad española.
+En esta asignatura uno de los temas principales es el diseño de automatismos usando GRAFCET, y su posterior programación en el lenguaje de esquema de contactos.
+
+Te proporciono el enunciado de un problema relacionado con el diseño de un automatismo usando GRAFCET:
+
+"""
+${doc1}
+"""
+
+A partir de este enunciado base, genera ${num} enunciados correspondientes a ${num} problemas que se refieran a sistemas industriales distintos entre sí, pero cuya solución sea estructuralmente la misma.
+Es decir: sistemas distintos a simple vista, pero el diagrama GRAFCET que los soluciona debe ser estructuralmente idéntico al del problema base, y todos con la misma dificultad. Debe parecer que los problemas son distintos.
+
+Ten en cuenta:
+- Evita ambigüedades.
+- Genera los enunciados con formato claro y saltos de línea donde ayuden.
+- Añade los ${num} enunciados numerados del 1 al ${num}, cada uno separado por dos saltos de línea.
+- Al principio de la respuesta escribe el enunciado original indicando **ENUNCIADO ORIGINAL PROPORCIONADO**.
+- Cuando empieces los generados, escribe **PROBLEMAS GENERADOS A PARTIR DEL ANTERIOR**.
+- Estilo: ${estilo}
+- ${cambia}
+- Al principio indica: **Estilo usado: …** y **LOS NOMBRES DE LAS VARIABLES (SÍ/NO) SE CAMBIAN RESPECTO DEL ORIGINAL** según corresponda.
+- Cada enunciado en Markdown. En la descripción del funcionamiento usa viñetas (-) no numeraciones (1., 2.).
+- Responde en español.`;
+}
+
+async function generate() {
+  if (!getBase()) { go(0); return; }
+  const key = document.getElementById('apiKey').value.trim();
+  if (!key) {
+    alert('Introduce una API key o usa «Ver ejemplo de salida (sin IA)».');
+    return;
+  }
+  const btn = document.getElementById('btnGenerate');
+  const status = document.getElementById('genStatus');
+  if (btn) btn.disabled = true;
+  if (status) status.innerHTML = '<div class="msg msg-info"><i class="ti ti-loader"></i> Generando enunciados… esto puede tardar unos segundos.</div>';
+
+  const provider = document.getElementById('aiProvider').value;
+  const model = document.getElementById('aiModel').value.trim();
+  const prompt = buildPrompt();
+  if (!prompt) { if (btn) btn.disabled = false; return; }
+
+  try {
+    const text = await callAI(provider, model, key, prompt);
+    lastResult = text;
+    document.getElementById('resultText').value = text;
+    if (status) status.innerHTML = '<div class="msg msg-ok"><i class="ti ti-check"></i> Generación completada. Revisa y exporta.</div>';
+    go(3);
+  } catch (e) {
+    if (status) status.innerHTML = '<div class="msg msg-warn"><i class="ti ti-alert-triangle"></i> Error: ' + esc(e.message) + '</div>';
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+function showDemoOutput() {
+  const n = parseInt(document.getElementById('numEnunciados').value, 10) || 3;
+  const styleNames = { formal: 'FORMAL', semi: 'SEMI-INFORMAL', muy: 'MUY INFORMAL (PACO)' };
+  const varsSi = document.getElementById('cambiaVars').value === 'si';
+  let out = `**Estilo usado: ${styleNames[selectedStyle]}**\n\n`;
+  out += `**LOS NOMBRES DE LAS VARIABLES ${varsSi ? 'SÍ' : 'NO'} SE CAMBIAN RESPECTO DEL ORIGINAL**\n\n`;
+  out += `**ENUNCIADO ORIGINAL PROPORCIONADO**\n\n${document.getElementById('baseText').value.trim() || DEMO_BASE}\n\n`;
+  out += `**PROBLEMAS GENERADOS A PARTIR DEL ANTERIOR**\n\n`;
+  out += `*(Ejemplo ilustrativo sin llamada a la IA — sustituye por una generación real con tu API key.)*\n\n`;
+  for (let i = 1; i <= Math.min(n, 2); i++) {
+    out += `### Problema ${i}\n\n`;
+    out += `Se desea automatizar un sistema industrial alternativo isomorfo al original (variante de demostración ${i}).\n\n`;
+    out += `- El ciclo se inicia con una condición de marcha análoga a PM.\n`;
+    out += `- Una detección de presencia equivale a S1.\n`;
+    out += `- Una discriminación binaria equivale a S2.\n`;
+    out += `- Dos actuadores desvían el flujo hacia dos destinos.\n`;
+    out += `- Existe paro de emergencia equivalente a PE.\n\n`;
+    out += `Se pide el GRAFCET y el esquema de contactos.\n\n\n`;
+  }
+  if (n > 2) out += `… (en la generación real aparecerían ${n} enunciados completos)\n`;
+  lastResult = out;
+  document.getElementById('resultText').value = out;
+  go(3);
+}
+
+
+
 /* ═══════════════════════════════════════════════════════════
    Motor GRAFCET real (validación + isomorfía en el cliente)
    Modelo:

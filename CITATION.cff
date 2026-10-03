@@ -14,6 +14,7 @@ authors:
     affiliation: "Universidad Miguel Hernández de Elche"
 license: MIT
 version: "0.3.0"
+doi: "10.5281/zenodo.23125394"
 date-released: "2026-10-03"
 url: "https://fborrasumh.github.io/isomorfia/"
 repository-code: "https://github.com/fborrasumh/isomorfia"

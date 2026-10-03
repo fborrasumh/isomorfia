@@ -2,6 +2,7 @@
 
 **Enunciados de problemas isomorfos** a partir de un enunciado base: mismos estructura y dificultad, distintos sistemas industriales (u otros contextos).
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23125394.svg)](https://doi.org/10.5281/zenodo.23125394)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 > Catálogo [fborrasumh/ia](https://fborrasumh.github.io/ia/) · Universidad Miguel Hernández de Elche

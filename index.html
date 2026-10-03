@@ -212,17 +212,57 @@ footer a { color: var(--doc); }
   <!-- STEP 0 -->
   <section class="panel active" id="panel-0">
     <h2>Enunciado base</h2>
-    <p class="hint">Sube un Word (.docx) o pega el texto del problema original. Debe describir con claridad el sistema a automatizar (etapas, sensores, actuadores).</p>
+    <p class="hint">Sube un Word, pega texto, usa el demo, o <strong>genera un enunciado nuevo con IA</strong> a partir de un tema de automatización industrial.</p>
 
-    <div class="actions" style="margin-top:0">
-      <button class="btn btn-primary" type="button" onclick="document.getElementById('docxIn').click()"><i class="ti ti-file-word"></i> Subir Word</button>
-      <input type="file" id="docxIn" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden onchange="handleDocx(event)">
-      <button class="btn btn-secondary" type="button" onclick="loadDemo()"><i class="ti ti-flask"></i> Ejemplo demo (cinta transportadora)</button>
+    <div class="section-title"><i class="ti ti-list"></i> Generar desde un tema (IA)</div>
+    <div class="row">
+      <div>
+        <label>Tema / tipo de instalación</label>
+        <select id="topicSelect">
+          <option value="cinta">Cinta transportadora y clasificación de piezas</option>
+          <option value="prensa">Prensa hidráulica / neumática de estampación</option>
+          <option value="deposito">Llenado y vaciado de depósitos / silos</option>
+          <option value="ascensor">Ascensor o montacargas de dos plantas</option>
+          <option value="parking">Barrera de parking / control de acceso</option>
+          <option value="taladro">Taladro o estación de mecanizado</option>
+          <option value="embotellado">Línea de embotellado / taponado</option>
+          <option value="semafaro">Cruce semafórico simplificado</option>
+          <option value="horno">Horno industrial con puerta y temperatura</option>
+          <option value="robot">Celda robotizada pick-and-place</option>
+          <option value="custom">Otro (escribir abajo)</option>
+        </select>
+      </div>
+      <div>
+        <label>Dificultad orientativa</label>
+        <select id="topicLevel">
+          <option value="basico">Básico (secuencia lineal + emergencia)</option>
+          <option value="medio" selected>Medio (elección exclusiva + emergencia)</option>
+          <option value="avanzado">Avanzado (paralelo o varios modos)</option>
+        </select>
+      </div>
     </div>
+    <div id="customTopicWrap" style="display:none">
+      <label>Describe el tema personalizado</label>
+      <input type="text" id="topicCustom" placeholder="Ej. sistema de riego automatizado con dos sectores…">
+    </div>
+    <div class="actions" style="margin-top:4px">
+      <button class="btn btn-primary" type="button" id="btnGenBase" onclick="generateBaseFromTopic()"><i class="ti ti-sparkles"></i> Generar enunciado base con IA</button>
+      <button class="btn btn-secondary" type="button" onclick="document.getElementById('docxIn').click()"><i class="ti ti-file-word"></i> Subir Word</button>
+      <input type="file" id="docxIn" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden onchange="handleDocx(event)">
+      <button class="btn btn-secondary" type="button" onclick="loadDemo()"><i class="ti ti-flask"></i> Demo cinta</button>
+    </div>
+    <details class="ai-box" style="margin-top:12px">
+      <summary><i class="ti ti-key"></i> API key (necesaria para generar desde tema)</summary>
+      <div style="padding-bottom:12px">
+        <p style="font-size:12px;color:var(--muted);margin-bottom:8px">Si ya la pondrás en Parámetros, puedes dejarlo vacío aquí y rellenarlo allí antes de generar.</p>
+        <label>API Key</label>
+        <input type="password" id="apiKeyBase" placeholder="sk-… / AIza… / sk-ant-…" oninput="syncApiKeys(this)">
+      </div>
+    </details>
     <div id="fileMsg"></div>
 
     <label style="margin-top:14px">Texto del enunciado base</label>
-    <textarea id="baseText" rows="12" placeholder="Pega aquí el enunciado o carga un Word…"></textarea>
+    <textarea id="baseText" rows="12" placeholder="Pega aquí el enunciado, cárgalo desde Word o genéralo con IA…"></textarea>
 
     <div class="msg msg-info">
       <i class="ti ti-info-circle"></i>
@@ -288,7 +328,7 @@ footer a { color: var(--doc); }
             </div>
           </div>
           <label>API Key</label>
-          <input type="password" id="apiKey" placeholder="AIza… / sk-… / sk-ant-…">
+          <input type="password" id="apiKey" placeholder="sk-… / AIza… / sk-ant-…" oninput="syncApiKeys(this)">
           <p style="font-size:12px;color:var(--muted);margin-top:-8px">La clave solo se usa en tu navegador hacia el proveedor elegido. Por defecto: OpenAI · modelo gpt-6-luna (configurable). El cuaderno original usaba Gemini.</p>
         </div>
       </details>
@@ -456,6 +496,98 @@ function loadDemo() {
   el.focus();
   el.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
+
+
+const TOPICS = {
+  cinta: "Cinta transportadora que clasifica piezas (grande/pequeña) hacia dos depósitos, con sensor de presencia, sensor de tamaño, motor de cinta, dos desvíos, marcha y paro de emergencia.",
+  prensa: "Prensa de estampación: subida/bajada del pistón, detección de pieza, fin de carrera superior e inferior, ciclo de prensado, marcha y emergencia.",
+  deposito: "Sistema de dos depósitos: llenado desde una bomba, sensores de nivel alto/bajo, válvulas de llenado y vaciado, selección de depósito, marcha y emergencia.",
+  ascensor: "Montacargas de dos plantas: llamada desde cada planta, sensores de planta, motor subir/bajar, apertura de puerta, marcha de ciclo y emergencia.",
+  parking: "Barrera de parking: detector de vehículo, ticket o validación, apertura/cierre de barrera, sensor de paso, cierre automático, emergencia.",
+  taladro: "Estación de taladro: amarre de pieza, avance del husillo, fin de carrera, refrigeración opcional, ciclo completo, marcha y emergencia.",
+  embotellado: "Línea de embotellado: llegada de botella, llenado por tiempo o nivel, taponado, expulsión, sensores de presencia, marcha y emergencia.",
+  semafaro: "Cruce semafórico de dos vías: ciclos de verde/ámbar/rojo, pulsador peatonal opcional, intermitencia de emergencia.",
+  horno: "Horno industrial: apertura/cierre de puerta, resistencia, sensor de temperatura umbral, ciclo de cocción, marcha y emergencia.",
+  robot: "Celda pick-and-place: detector de pieza en entrada, pinza, dos posiciones (origen/destino), fin de ciclo, marcha y emergencia."
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+  const sel = document.getElementById('topicSelect');
+  if (sel) {
+    sel.addEventListener('change', () => {
+      const w = document.getElementById('customTopicWrap');
+      if (w) w.style.display = sel.value === 'custom' ? 'block' : 'none';
+    });
+  }
+});
+
+function syncApiKeys(el) {
+  const v = el.value;
+  const a = document.getElementById('apiKey');
+  const b = document.getElementById('apiKeyBase');
+  if (a && el.id === 'apiKeyBase') a.value = v;
+  if (b && el.id === 'apiKey') b.value = v;
+}
+
+async function generateBaseFromTopic() {
+  let apiKey = (document.getElementById('apiKeyBase')?.value || document.getElementById('apiKey')?.value || '').trim();
+  if (!apiKey) {
+    alert('Introduce una API key en el desplegable de esta pantalla (o en Parámetros). También puedes usar «Demo cinta» sin IA.');
+    return;
+  }
+
+  const topicKey = document.getElementById('topicSelect').value;
+  let topicDesc = TOPICS[topicKey];
+  if (topicKey === 'custom') {
+    topicDesc = (document.getElementById('topicCustom').value || '').trim();
+    if (topicDesc.length < 15) {
+      alert('Describe el tema personalizado con un poco más de detalle.');
+      return;
+    }
+  }
+  const level = document.getElementById('topicLevel').value;
+  const levelTxt = {
+    basico: 'secuencia principalmente lineal, pocos sensores, con paro de emergencia',
+    medio: 'al menos una elección exclusiva (OR) según un sensor, más paro de emergencia',
+    avanzado: 'puede incluir paralelismo (AND) o varios modos de funcionamiento, más emergencia'
+  }[level] || 'medio';
+
+  const btn = document.getElementById('btnGenBase');
+  const msg = document.getElementById('fileMsg');
+  if (btn) btn.disabled = true;
+  if (msg) msg.innerHTML = '<div class="msg msg-info"><i class="ti ti-loader"></i> Generando enunciado base con IA…</div>';
+
+  const prompt = `Eres profesor de Automatización Industrial (Grado en Ingeniería Eléctrica, universidad española).
+Redacta UN solo enunciado de problema para diseñar un automatismo con GRAFCET y esquema de contactos.
+
+Tema de la instalación:
+${topicDesc}
+
+Nivel de dificultad estructural: ${levelTxt}.
+
+Requisitos del enunciado:
+- Estilo formal, técnico, claro (como examen universitario).
+- Describe sensores y actuadores con nombres tipo S1, S2, M1, EV1, PM, PE.
+- Incluye sección de funcionamiento con viñetas (-).
+- Incluye paro de emergencia.
+- Termina pidiendo: diseñar el GRAFCET y el esquema de contactos equivalente.
+- No generes la solución GRAFCET, solo el enunciado.
+- Extensión orientativa: 250–450 palabras.
+- Responde solo con el enunciado en español, sin preámbulos.`;
+
+  try {
+    const provider = document.getElementById('aiProvider')?.value || 'openai';
+    const model = document.getElementById('aiModel')?.value?.trim() || 'gpt-6-luna';
+    const text = await callAI(provider, model, apiKey, prompt);
+    document.getElementById('baseText').value = text.trim();
+    if (msg) msg.innerHTML = '<div class="msg msg-ok"><i class="ti ti-check"></i> Enunciado base generado desde el tema seleccionado. Revísalo y continúa.</div>';
+  } catch (e) {
+    if (msg) msg.innerHTML = '<div class="msg msg-warn"><i class="ti ti-alert-triangle"></i> ' + esc(e.message) + '</div>';
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
 
 async function handleDocx(ev) {
   const file = ev.target.files && ev.target.files[0];

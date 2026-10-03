@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IsomorfIA · Enunciados de problemas isomorfos</title>
+<meta name="description" content="Genera enunciados de problemas isomorfos a partir de un enunciado base. Idea: Ramón Ñeco García. Implementación Forja UMH.">
+<meta name="author" content="Ramón Ñeco García, Fernando Borrás Rocher">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.8.0/mammoth.browser.min.js"></script>
+<style>
+:root {
+  --bg: #f4f5f2; --surface: #fff; --border: #e2e1dc; --border-strong: #c9c8c2;
+  --text: #161513; --muted: #6f6d67;
+  --inv: #0f5c42; --inv-soft: #e0f2ea; --inv-glow: rgba(15,92,66,.12);
+  --doc: #1a4fd8; --warn: #b83a0c; --warn-soft: #fde9e3;
+  --amber: #9a7209; --amber-soft: #faf0d6;
+  --radius: 12px; --shadow: 0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.04);
+  --shadow-lg: 0 4px 24px rgba(0,0,0,.07);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; line-height: 1.55; -webkit-font-smoothing: antialiased; }
+h1,h2,h3 { font-family: 'Sora', sans-serif; font-weight: 700; letter-spacing: -.02em; }
+a { color: var(--doc); text-decoration: none; } a:hover { text-decoration: underline; }
+button, input, select, textarea { font: inherit; }
+
+.hero {
+  background: linear-gradient(145deg, #0d1f18 0%, #122a20 45%, #1a1916 100%);
+  color: #fff; padding: 36px 20px 32px; text-align: center; position: relative; overflow: hidden;
+}
+.hero::before {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(ellipse 80% 60% at 50% -20%, rgba(26,122,88,.35), transparent 60%);
+  pointer-events: none;
+}
+.hero .eyebrow { font-size: 11px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; color: #7a9e8e; margin-bottom: 12px; position: relative; }
+.hero h1 { font-size: clamp(1.75rem, 4.5vw, 2.5rem); font-weight: 800; position: relative; }
+.hero h1 span { color: #5ee4a8; }
+.hero .sub { color: #9bb5a8; font-size: .95rem; max-width: 540px; margin: 10px auto 0; position: relative; line-height: 1.6; }
+.hero-badges { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin-top: 18px; position: relative; }
+.badge {
+  display: inline-flex; align-items: center; gap: 5px; padding: 5px 12px; border-radius: 99px;
+  font-size: 11px; font-weight: 600; background: rgba(255,255,255,.08); color: #b8d4c8; border: 1px solid rgba(255,255,255,.1);
+}
+
+.app { max-width: 920px; margin: 0 auto; padding: 0 16px 100px; }
+
+.author-card {
+  display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 16px 18px; margin: -20px 0 0; box-shadow: var(--shadow-lg); position: relative; z-index: 2;
+}
+.author-block { display: flex; align-items: center; gap: 14px; flex: 1; min-width: 240px; }
+.author-avatar {
+  width: 48px; height: 48px; border-radius: 12px;
+  background: linear-gradient(135deg, var(--inv-soft), #c8e8d8);
+  display: flex; align-items: center; justify-content: center; font-size: 20px; color: var(--inv); flex-shrink: 0;
+}
+.author-card .name { font-weight: 700; font-size: 14px; }
+.author-card .role { font-size: 11px; color: var(--muted); margin-top: 1px; }
+.author-card .aff { font-size: 12px; color: var(--muted); }
+.author-card .orcid { font-size: 12px; color: var(--inv); display: inline-flex; align-items: center; gap: 4px; margin-top: 2px; font-weight: 500; }
+.credit-idea {
+  width: 100%; font-size: 12px; color: var(--muted); padding-top: 10px; border-top: 1px solid var(--border); margin-top: 4px;
+}
+
+.stepper { display: flex; gap: 6px; margin: 28px 0 18px; flex-wrap: wrap; }
+.stepper button {
+  flex: 1; min-width: 120px; padding: 11px 8px; border: 1px solid var(--border-strong);
+  background: var(--surface); border-radius: 10px; cursor: pointer; font-size: 12px; font-weight: 600;
+  color: var(--muted); transition: all .18s;
+}
+.stepper button .num {
+  display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px;
+  border-radius: 50%; font-size: 11px; background: var(--border); color: var(--muted); margin-right: 5px;
+}
+.stepper button.active { background: var(--inv); color: #fff; border-color: var(--inv); box-shadow: 0 2px 12px var(--inv-glow); }
+.stepper button.active .num { background: rgba(255,255,255,.25); color: #fff; }
+.stepper button.done { background: var(--inv-soft); color: var(--inv); border-color: #a8d9c4; }
+.stepper button.done .num { background: var(--inv); color: #fff; }
+.stepper button:hover:not(.active) { background: #f0efe9; }
+
+.panel {
+  display: none; background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+  padding: 26px 22px; box-shadow: var(--shadow); animation: fadeIn .25s ease;
+}
+.panel.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.panel h2 { font-size: 1.2rem; margin-bottom: 4px; }
+.panel .hint { font-size: 13.5px; color: var(--muted); margin-bottom: 18px; line-height: 1.5; }
+
+label { display: block; font-size: 11px; font-weight: 600; color: var(--muted); margin-bottom: 5px; text-transform: uppercase; letter-spacing: .05em; }
+input[type=text], input[type=password], input[type=number], select, textarea {
+  width: 100%; padding: 10px 13px; border: 1px solid var(--border-strong); border-radius: 9px;
+  background: #fafaf8; margin-bottom: 14px; outline: none; transition: border-color .15s, box-shadow .15s;
+}
+input:focus, select:focus, textarea:focus { border-color: var(--inv); background: #fff; box-shadow: 0 0 0 3px var(--inv-glow); }
+textarea { min-height: 140px; font-size: 13px; line-height: 1.5; }
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 600px) { .row { grid-template-columns: 1fr; } }
+
+.btn {
+  display: inline-flex; align-items: center; gap: 7px; padding: 10px 18px; border-radius: 9px; border: 0;
+  font-weight: 600; font-size: 13.5px; cursor: pointer; transition: all .15s;
+}
+.btn-primary { background: var(--inv); color: #fff; box-shadow: 0 1px 3px rgba(15,92,66,.25); }
+.btn-primary:hover { background: #0a4a34; transform: translateY(-1px); }
+.btn-secondary { background: #f3f2ee; color: var(--text); border: 1px solid var(--border-strong); }
+.btn-secondary:hover { background: #eae9e3; }
+.btn-ghost { background: transparent; color: var(--muted); }
+.btn:disabled { opacity: .45; cursor: not-allowed; transform: none !important; }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 18px; align-items: center; }
+
+.msg {
+  padding: 12px 15px; border-radius: 10px; font-size: 13px; margin: 12px 0;
+  display: flex; gap: 10px; align-items: flex-start; line-height: 1.5;
+}
+.msg i { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+.msg-info { background: #eef3ff; color: #1a3a8a; border: 1px solid #d0dbf5; }
+.msg-ok { background: var(--inv-soft); color: var(--inv); border: 1px solid #b5dfc9; }
+.msg-warn { background: var(--warn-soft); color: var(--warn); border: 1px solid #f0c4b4; }
+.msg-amber { background: var(--amber-soft); color: var(--amber); border: 1px solid #edd9a0; }
+
+.style-cards { display: grid; gap: 10px; margin-bottom: 16px; }
+.style-card {
+  border: 1px solid var(--border); border-radius: 11px; padding: 14px 16px; cursor: pointer;
+  background: #fafaf8; transition: .15s;
+}
+.style-card:hover, .style-card.selected { border-color: var(--inv); background: var(--inv-soft); box-shadow: 0 0 0 3px var(--inv-glow); }
+.style-card h4 { font-size: 14px; margin-bottom: 4px; }
+.style-card p { font-size: 12.5px; color: var(--muted); margin: 0; line-height: 1.45; }
+
+.output-box {
+  background: #fafaf8; border: 1px solid var(--border); border-radius: 11px;
+  padding: 18px; margin-top: 12px; max-height: 520px; overflow-y: auto;
+  font-size: 14px; line-height: 1.6; white-space: pre-wrap;
+}
+.output-box h1, .output-box h2, .output-box h3 { margin: 12px 0 6px; }
+.output-box ul { margin: 8px 0 8px 20px; }
+.output-box strong { font-weight: 700; }
+
+.ai-box {
+  background: linear-gradient(135deg, #f8f7f4, #f0f5f2); border: 1px solid var(--border);
+  border-radius: 11px; padding: 4px 16px; margin: 12px 0;
+}
+.ai-box summary {
+  cursor: pointer; font-weight: 600; font-size: 13px; padding: 12px 0;
+  list-style: none; display: flex; align-items: center; gap: 8px;
+}
+.ai-box summary::-webkit-details-marker { display: none; }
+.ai-box summary i { color: var(--inv); }
+
+.limits { font-size: 12px; color: var(--muted); margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border); line-height: 1.55; }
+.limits strong { color: var(--text); }
+footer { text-align: center; padding: 28px 16px; font-size: 12px; color: var(--muted); }
+footer a { color: var(--doc); }
+
+.section-title { font-size: 14px; font-weight: 700; margin: 18px 0 8px; display: flex; align-items: center; gap: 8px; }
+.section-title i { color: var(--inv); }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <p class="eyebrow">fborrasumh · UMH · Docencia</p>
+  <h1>Isomorf<span>IA</span></h1>
+  <p class="sub">Variantes de enunciados con la misma estructura y dificultad. Ideal para Automatización Industrial (GRAFCET) y otros problemas de diseño.</p>
+  <div class="hero-badges">
+    <span class="badge"><i class="ti ti-copy"></i> Problemas isomorfos</span>
+    <span class="badge"><i class="ti ti-file-word"></i> Word o texto</span>
+    <span class="badge"><i class="ti ti-message-2"></i> 3 estilos</span>
+    <span class="badge"><i class="ti ti-shield-check"></i> Clave del usuario</span>
+  </div>
+</header>
+
+<div class="app">
+
+  <div class="author-card">
+    <div class="author-block">
+      <div class="author-avatar"><i class="ti ti-user"></i></div>
+      <div>
+        <div class="name">Ramón Ñeco García</div>
+        <div class="role">Idea original · diseño pedagógico</div>
+        <div class="aff">Universidad Miguel Hernández de Elche</div>
+        <a class="orcid" href="https://orcid.org/0000-0002-4338-3692" target="_blank" rel="noopener"><i class="ti ti-id"></i> 0000-0002-4338-3692</a>
+      </div>
+    </div>
+    <div class="author-block">
+      <div class="author-avatar"><i class="ti ti-user"></i></div>
+      <div>
+        <div class="name">Fernando Borrás Rocher</div>
+        <div class="role">Implementación Forja</div>
+        <div class="aff">Universidad Miguel Hernández de Elche</div>
+        <a class="orcid" href="https://orcid.org/0000-0002-5519-4573" target="_blank" rel="noopener"><i class="ti ti-id"></i> 0000-0002-5519-4573</a>
+      </div>
+    </div>
+    <div class="credit-idea">
+      <i class="ti ti-bulb"></i> Procedimiento original: cuaderno Colab de Ramón Ñeco García para generar enunciados isomorfos en <em>Automatización Industrial</em> (Grado en Ingeniería Eléctrica).
+    </div>
+  </div>
+
+  <div class="stepper">
+    <button type="button" class="active" data-step="0" onclick="go(0)"><span class="num">1</span> Enunciado base</button>
+    <button type="button" data-step="1" onclick="go(1)"><span class="num">2</span> Parámetros</button>
+    <button type="button" data-step="2" onclick="go(2)"><span class="num">3</span> Generar</button>
+    <button type="button" data-step="3" onclick="go(3)"><span class="num">4</span> Resultado</button>
+    <button type="button" data-step="4" onclick="go(4)"><span class="num">5</span> Validar GRAFCET</button>
+  </div>
+
+  <!-- STEP 0 -->
+  <section class="panel active" id="panel-0">
+    <h2>Enunciado base</h2>
+    <p class="hint">Sube un Word (.docx) o pega el texto del problema original. Debe describir con claridad el sistema a automatizar (etapas, sensores, actuadores).</p>
+
+    <div class="actions" style="margin-top:0">
+      <button class="btn btn-primary" type="button" onclick="document.getElementById('docxIn').click()"><i class="ti ti-file-word"></i> Subir Word</button>
+      <input type="file" id="docxIn" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden onchange="handleDocx(event)">
+      <button class="btn btn-secondary" type="button" onclick="loadDemo()"><i class="ti ti-flask"></i> Ejemplo demo (cinta transportadora)</button>
+    </div>
+    <div id="fileMsg"></div>
+
+    <label style="margin-top:14px">Texto del enunciado base</label>
+    <textarea id="baseText" rows="12" placeholder="Pega aquí el enunciado o carga un Word…"></textarea>
+
+    <div class="msg msg-info">
+      <i class="ti ti-info-circle"></i>
+      <div>Los enunciados generados deben ser <strong>isomorfos</strong>: sistemas distintos a simple vista, pero con la misma estructura de solución (p. ej. el mismo GRAFCET en esencia) y la misma dificultad.</div>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-primary" type="button" onclick="if(getBase()) go(1)">Continuar a parámetros <i class="ti ti-arrow-right"></i></button>
+    </div>
+  </section>
+
+  <!-- STEP 1 -->
+  <section class="panel" id="panel-1">
+    <h2>Parámetros de generación</h2>
+    <p class="hint">Igual que en el cuaderno original: número de variantes, estilo de redacción y nombres de variables.</p>
+
+    <div class="row">
+      <div>
+        <label>Número de enunciados a generar</label>
+        <input type="number" id="numEnunciados" value="3" min="1" max="15">
+      </div>
+      <div>
+        <label>Cambiar nombres de variables (sensores/actuadores)</label>
+        <select id="cambiaVars">
+          <option value="si">Sí — nombres distintos al original</option>
+          <option value="no">No — mismos nombres que el original</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="section-title"><i class="ti ti-writing"></i> Estilo de redacción</div>
+    <div class="style-cards" id="styleCards">
+      <div class="style-card selected" data-style="formal" onclick="selectStyle(this)">
+        <h4>Formal</h4>
+        <p>Técnico, conciso y claro, como lo escribiría un ingeniero (estilo típico de enunciado universitario).</p>
+      </div>
+      <div class="style-card" data-style="semi" onclick="selectStyle(this)">
+        <h4>Semi-informal</h4>
+        <p>Como una persona con formación universitaria que no es ingeniero (p. ej. encargado de empresa).</p>
+      </div>
+      <div class="style-card" data-style="muy" onclick="selectStyle(this)">
+        <h4>Muy informal («Paco»)</h4>
+        <p>El dueño de la instalación habla en primera persona: sabe lo que quiere, sin jerga de sensores/actuadores. Cercano al alumnado.</p>
+      </div>
+    </div>
+
+    <div class="ai-box">
+      <details open>
+        <summary><i class="ti ti-key"></i> API de IA (necesaria para generar)</summary>
+        <div style="padding-bottom:14px">
+          <div class="row">
+            <div>
+              <label>Proveedor</label>
+              <select id="aiProvider" onchange="syncModel()">
+                <option value="openai" selected>OpenAI</option>
+                <option value="google">Gemini (Google)</option>
+                <option value="anthropic">Claude</option>
+              </select>
+            </div>
+            <div>
+              <label>Modelo</label>
+              <input type="text" id="aiModel" value="gpt-6-luna">
+            </div>
+          </div>
+          <label>API Key</label>
+          <input type="password" id="apiKey" placeholder="AIza… / sk-… / sk-ant-…">
+          <p style="font-size:12px;color:var(--muted);margin-top:-8px">La clave solo se usa en tu navegador hacia el proveedor elegido. Por defecto: OpenAI · modelo gpt-6-luna (configurable). El cuaderno original usaba Gemini.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-secondary" type="button" onclick="go(0)"><i class="ti ti-arrow-left"></i> Enunciado</button>
+      <button class="btn btn-primary" type="button" onclick="go(2)">Revisar y generar <i class="ti ti-arrow-right"></i></button>
+    </div>
+  </section>
+
+  <!-- STEP 2 -->
+  <section class="panel" id="panel-2">
+    <h2>Generar enunciados</h2>
+    <p class="hint">Se enviará el enunciado base y los parámetros al modelo. Revisa el resumen antes de confirmar.</p>
+
+    <div id="summaryBox" class="msg msg-info"></div>
+
+    <div class="actions">
+      <button class="btn btn-secondary" type="button" onclick="go(1)"><i class="ti ti-arrow-left"></i> Parámetros</button>
+      <button class="btn btn-primary" type="button" id="btnGenerate" onclick="generate()"><i class="ti ti-sparkles"></i> Generar con IA</button>
+      <button class="btn btn-secondary" type="button" onclick="showDemoOutput()"><i class="ti ti-eye"></i> Ver ejemplo de salida (sin IA)</button>
+    </div>
+    <div id="genStatus"></div>
+
+    <div class="limits">
+      <strong>Límite docente:</strong> la app no comprueba que el GRAFCET sea idéntico; eso lo valida el profesorado. Usa las variantes como borrador y revisa ambigüedades.
+    </div>
+  </section>
+
+  <!-- STEP 3 -->
+  <section class="panel" id="panel-3">
+    <h2>Resultado</h2>
+    <p class="hint">Puedes editar el texto antes de exportar. Formato Markdown, como en el cuaderno original.</p>
+
+    <div class="actions" style="margin-top:0">
+      <button class="btn btn-secondary" type="button" onclick="downloadMd()"><i class="ti ti-download"></i> Descargar .md</button>
+      <button class="btn btn-secondary" type="button" onclick="copyResult()"><i class="ti ti-copy"></i> Copiar</button>
+      <button class="btn btn-ghost" type="button" onclick="go(2)"><i class="ti ti-arrow-left"></i> Volver a generar</button>
+    </div>
+
+    <label style="margin-top:12px">Salida (editable)</label>
+    <textarea id="resultText" rows="22" style="font-family:ui-monospace,monospace;font-size:12.5px"></textarea>
+
+    <div class="section-title"><i class="ti ti-markdown"></i> Vista previa</div>
+    <div class="output-box" id="preview"></div>
+
+    <div class="actions">
+      <button class="btn btn-primary" type="button" onclick="go(4)"><i class="ti ti-topology-star-3"></i> Validar isomorfía / GRAFCET</button>
+    </div>
+
+    <div class="limits">
+      Idea pedagógica: Ramón Ñeco García. Implementación: Fernando Borrás Rocher. Licencia MIT.
+    </div>
+  </section>
+
+  <!-- STEP 4: VALIDAR -->
+  <section class="panel" id="panel-4">
+    <h2>Validación GRAFCET real</h2>
+    <p class="hint">
+      El modelo propone un GRAFCET en <strong>JSON formal</strong> (etapas, transiciones, acciones, tipo de enlace).
+      El <strong>código del navegador</strong> valida propiedades estructurales y compara isomorfía de grafos
+      (misma topología, ignorando nombres). Opcionalmente puedes pegar JSON GRAFCET manual.
+    </p>
+
+    <div class="actions" style="margin-top:0">
+      <button class="btn btn-primary" type="button" id="btnValidate" onclick="validateGrafcetReal()"><i class="ti ti-shield-check"></i> Extraer GRAFCET (IA) + validar en código</button>
+      <button class="btn btn-secondary" type="button" onclick="validateJsonPaste()"><i class="ti ti-braces"></i> Validar JSON pegado</button>
+      <button class="btn btn-ghost" type="button" onclick="go(3)"><i class="ti ti-arrow-left"></i> Resultado</button>
+    </div>
+    <div id="valStatus"></div>
+
+    <label style="margin-top:12px">JSON GRAFCET (base + variantes) — editable</label>
+    <textarea id="grafcetJson" rows="12" style="font-family:ui-monospace,monospace;font-size:12px" placeholder='{"base":{...},"variants":[{...}]}'></textarea>
+
+    <div class="section-title"><i class="ti ti-checklist"></i> Resultado de validación (código)</div>
+    <div id="isoReport" class="output-box" style="display:none"></div>
+
+    <div class="section-title"><i class="ti ti-topology-ring"></i> Diagrama textual / firma estructural</div>
+    <div id="profileBox" class="output-box" style="display:none;white-space:pre-wrap;font-family:ui-monospace,monospace;font-size:12.5px"></div>
+
+    <div class="actions">
+      <button class="btn btn-secondary" type="button" onclick="downloadValidation()"><i class="ti ti-download"></i> Descargar informe</button>
+    </div>
+
+    <div class="limits">
+      <strong>Qué comprueba el código:</strong> una sola etapa inicial; transiciones con origen/destino existentes;
+      sin etapas huérfanas; acciones solo en etapas; tipos de enlace (seq / or / and); alcanzabilidad desde la inicial;
+      <strong>isomorfía estructural</strong> (firma canónica del grafo etapa–transición, independiente de nombres).
+      <strong>No comprueba:</strong> tiempos, niveles eléctricos ni semántica física del proceso real.
+    </div>
+  </section>
+
+</div>
+
+<footer>
+  <p><strong>IsomorfIA</strong> ·
+    <a href="https://orcid.org/0000-0002-4338-3692" target="_blank" rel="noopener">Ramón Ñeco García</a> ·
+    <a href="https://orcid.org/0000-0002-5519-4573" target="_blank" rel="noopener">Fernando Borrás Rocher</a> · UMH
+  </p>
+  <p style="margin-top:5px"><a href="https://fborrasumh.github.io/ia/" target="_blank" rel="noopener">Catálogo de herramientas IA</a> · MIT · v0.3.0</p>
+</footer>
+
+<script>
+let selectedStyle = 'formal';
+let lastResult = '';
+
+const STYLES = {
+  formal: "Usa el mismo estilo de redacción que el documento proporcionado: técnico, conciso y claro, como si lo escribiera un ingeniero.",
+  semi: "Usa un estilo informal, como si lo escribiera una persona con formación universitaria, pero que no es ingeniero.",
+  muy: "Usa un estilo muy informal, como si lo describiera el dueño de la instalación —que se llama Paco y habla en primera persona—, quien sabe cómo quiere que funcione el sistema, pero no tiene conocimientos técnicos sobre sensores o actuadores. Paco se expresa de forma muy cercana a los estudiantes."
+};
+
+const DEMO_BASE = `ENUNCIADO BASE — Cinta transportadora con clasificación (Automatización Industrial)
+
+Se desea automatizar una cinta transportadora que clasifica piezas según su tamaño.
+
+Descripción del sistema:
+- Existe un sensor de presencia S1 al inicio de la cinta que detecta la llegada de una pieza.
+- Un sensor de tamaño S2 discrimina pieza grande (activado) o pequeña (no activado).
+- El actuador M1 pone en marcha la cinta.
+- El actuador EV1 desvía piezas grandes hacia el depósito A.
+- El actuador EV2 desvía piezas pequeñas hacia el depósito B.
+- Un pulsador de marcha PM inicia el ciclo cuando el operario lo solicita.
+- Un pulsador de paro de emergencia PE detiene todo el sistema de forma inmediata.
+
+Funcionamiento requerido:
+- En reposo, la cinta está parada y las electroválvulas desactivadas.
+- Al pulsar PM, si hay pieza en S1, se arranca M1.
+- Si S2 indica pieza grande, se activa EV1 el tiempo necesario para desviar y se vuelve a reposo.
+- Si S2 indica pieza pequeña, se activa EV2 de forma análoga.
+- En cualquier momento, PE anula salidas y vuelve a la etapa inicial.
+
+Se pide: diseñar el GRAFCET del automatismo y el esquema de contactos equivalente.`;
+
+function go(i) {
+  document.querySelectorAll('.panel').forEach((p, idx) => p.classList.toggle('active', idx === i));
+  document.querySelectorAll('.stepper button').forEach((b, idx) => {
+    b.classList.toggle('active', idx === i);
+    b.classList.toggle('done', idx < i);
+  });
+  if (i === 2) updateSummary();
+  if (i === 3) renderPreview();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   Motor GRAFCET real (validación + isomorfía en el cliente)
+   Modelo:
+   {
+     id, name,
+     steps: [{ id, initial?:bool, actions?: string[] }],
+     transitions: [{ id, from: string|string[], to: string|string[], condition?: string, link?: "seq"|"or"|"and" }]
+   }
+   ═══════════════════════════════════════════════════════════ */
+
+function normalizeGrafcet(g) {
+  if (!g || typeof g !== 'object') throw new Error('GRAFCET no es un objeto');
+  const steps = (g.steps || []).map((s, i) => ({
+    id: String(s.id || ('E' + i)),
+    initial: !!s.initial,
+    actions: Array.isArray(s.actions) ? s.actions.map(String) : (s.actions ? [String(s.actions)] : [])
+  }));
+  const transitions = (g.transitions || []).map((t, i) => ({
+    id: String(t.id || ('T' + i)),
+    from: Array.isArray(t.from) ? t.from.map(String) : [String(t.from)],
+    to: Array.isArray(t.to) ? t.to.map(String) : [String(t.to)],
+    condition: t.condition != null ? String(t.condition) : '',
+    link: (t.link || 'seq').toLowerCase()
+  }));
+  return { id: g.id || '', name: g.name || '', steps, transitions };
+}
+
+function validateGrafcetStructure(g0) {
+  const errors = [];
+  const warnings = [];
+  let g;
+  try { g = normalizeGrafcet(g0); } catch (e) { return { ok: false, errors: [e.message], warnings, signature: null, g: null }; }
+
+  if (!g.steps.length) errors.push('No hay etapas (steps).');
+  const ids = new Set(g.steps.map(s => s.id));
+  if (ids.size !== g.steps.length) errors.push('IDs de etapa duplicados.');
+
+  const initials = g.steps.filter(s => s.initial);
+  if (initials.length === 0) errors.push('Falta etapa inicial (initial: true).');
+  if (initials.length > 1) errors.push('Hay ' + initials.length + ' etapas iniciales; debe haber exactamente una.');
+
+  g.transitions.forEach(t => {
+    if (!['seq', 'or', 'and'].includes(t.link)) warnings.push(t.id + ': link desconocido «' + t.link + '» (se trata como seq).');
+    t.from.forEach(f => { if (!ids.has(f)) errors.push(t.id + ': origen «' + f + '» no existe.'); });
+    t.to.forEach(to => { if (!ids.has(to)) errors.push(t.id + ': destino «' + to + '» no existe.'); });
+    if (!t.from.length || !t.to.length) errors.push(t.id + ': from/to vacíos.');
+  });
+
+  // Orphan steps: not initial and never appear in any transition
+  const touched = new Set();
+  g.transitions.forEach(t => { t.from.forEach(x => touched.add(x)); t.to.forEach(x => touched.add(x)); });
+  g.steps.forEach(s => {
+    if (!s.initial && !touched.has(s.id)) warnings.push('Etapa huérfana: ' + s.id);
+  });
+
+  // Reachability from initial (BFS on step graph)
+  let reachable = new Set();
+  if (initials.length === 1) {
+    const start = initials[0].id;
+    reachable.add(start);
+    const q = [start];
+    const adj = {};
+    g.steps.forEach(s => { adj[s.id] = []; });
+    g.transitions.forEach(t => {
+      t.from.forEach(f => { t.to.forEach(to => { if (adj[f]) adj[f].push(to); }); });
+    });
+    while (q.length) {
+      const u = q.shift();
+      (adj[u] || []).forEach(v => {
+        if (!reachable.has(v)) { reachable.add(v); q.push(v); }
+      });
+    }
+    g.steps.forEach(s => {
+      if (!reachable.has(s.id)) warnings.push('Etapa no alcanzable desde la inicial: ' + s.id);
+    });
+  }
+
+  // Dead-end steps (no outgoing) — warning unless only one step
+  if (g.steps.length > 1) {
+    const outdeg = {};
+    g.steps.forEach(s => { outdeg[s.id] = 0; });
+    g.transitions.forEach(t => t.from.forEach(f => { outdeg[f] = (outdeg[f] || 0) + 1; }));
+    g.steps.forEach(s => {
+      if (outdeg[s.id] === 0 && !s.initial) warnings.push('Etapa sin transición de salida: ' + s.id);
+    });
+  }
+
+  const signature = structuralSignature(g);
+  return { ok: errors.length === 0, errors, warnings, signature, g, reachable: reachable.size };
+}
+
+/** Firma canónica independiente de nombres: topología del grafo de etapas */
+function structuralSignature(g) {
+  // Relabel steps by BFS order from initial, then encode multiset of edge types
+  const initials = g.steps.filter(s => s.initial);
+  if (!initials.length) return 'NO_INITIAL';
+  const start = initials[0].id;
+  const order = [];
+  const map = {};
+  const seen = new Set([start]);
+  const q = [start];
+  const adj = {};
+  g.steps.forEach(s => { adj[s.id] = []; });
+  g.transitions.forEach(t => {
+    const link = t.link || 'seq';
+    t.from.forEach(f => t.to.forEach(to => { adj[f].push({ to, link, fanIn: t.from.length, fanOut: t.to.length }); }));
+  });
+  while (q.length) {
+    const u = q.shift();
+    order.push(u);
+    map[u] = 'N' + (order.length - 1);
+    (adj[u] || []).forEach(e => {
+      if (!seen.has(e.to)) { seen.add(e.to); q.push(e.to); }
+    });
+  }
+  // Unreachable nodes get ids after
+  g.steps.forEach(s => {
+    if (!seen.has(s.id)) {
+      order.push(s.id);
+      map[s.id] = 'U' + (order.length - 1);
+    }
+  });
+
+  const edges = [];
+  g.transitions.forEach(t => {
+    const link = t.link || 'seq';
+    t.from.forEach(f => t.to.forEach(to => {
+      edges.push([map[f], map[to], link, t.from.length, t.to.length].join('>'));
+    }));
+  });
+  edges.sort();
+  const actCounts = g.steps.map(s => (s.actions || []).length).sort((a, b) => a - b);
+  return [
+    'steps=' + g.steps.length,
+    'trans=' + g.transitions.length,
+    'init=1',
+    'acts=' + actCounts.join(','),
+    'edges=' + edges.join('|')
+  ].join(';');
+}
+
+function grafcetDiagram(g) {
+  g = normalizeGrafcet(g);
+  let lines = ['GRAFCET: ' + (g.name || g.id || '(sin nombre)'), ''];
+  g.steps.forEach(s => {
+    lines.push((s.initial ? '● ' : '○ ') + s.id + (s.actions.length ? ' / ' + s.actions.join(', ') : ''));
+  });
+  lines.push('');
+  g.transitions.forEach(t => {
+    lines.push(t.from.join('+') + ' --[' + (t.condition || '…') + '|' + t.link + ']--> ' + t.to.join('+'));
+  });
+  return lines.join('\\n');
+}
+
+function compareSignatures(sigBase, sigVar) {
+  if (sigBase === sigVar) return { isomorphic: true, score: 100, detail: 'Firmas estructurales idénticas.' };
+  // Partial score: compare components
+  const parse = s => Object.fromEntries((s || '').split(';').map(x => {
+    const i = x.indexOf('=');
+    return i < 0 ? [x, ''] : [x.slice(0, i), x.slice(i + 1)];
+  }));
+  const a = parse(sigBase), b = parse(sigVar);
+  let score = 0, notes = [];
+  if (a.steps === b.steps) score += 25; else notes.push('nº etapas ' + a.steps + ' vs ' + b.steps);
+  if (a.trans === b.trans) score += 25; else notes.push('nº transiciones ' + a.trans + ' vs ' + b.trans);
+  if (a.acts === b.acts) score += 15; else notes.push('perfil de acciones distinto');
+  // edge multiset Jaccard
+  const ea = new Set((a.edges || '').split('|').filter(Boolean));
+  const eb = new Set((b.edges || '').split('|').filter(Boolean));
+  let inter = 0;
+  ea.forEach(e => { if (eb.has(e)) inter++; });
+  const uni = new Set([...ea, ...eb]).size || 1;
+  const j = inter / uni;
+  score += Math.round(35 * j);
+  if (j < 1) notes.push('topología de aristas distinta (Jaccard ' + j.toFixed(2) + ')');
+  return { isomorphic: false, score: Math.min(100, score), detail: notes.join('; ') || 'diferencias menores' };
+}
+
+function parseGrafcetBundle(text) {
+  const raw = text.trim();
+  let data;
+  try {
+    data = JSON.parse(raw);
+  } catch (e) {
+    // try extract JSON block
+    const m = raw.match(/\\{[\\s\\S]*\\}/);
+    if (!m) throw new Error('No se encontró JSON válido');
+    data = JSON.parse(m[0]);
+  }
+  if (data.base && data.variants) return data;
+  if (data.steps && data.transitions) return { base: data, variants: [] };
+  if (Array.isArray(data)) return { base: data[0], variants: data.slice(1) };
+  throw new Error('JSON debe tener forma { base: GRAFCET, variants: GRAFCET[] }');
+}
+
+function runValidationOnBundle(bundle) {
+  const baseV = validateGrafcetStructure(bundle.base);
+  const variantResults = (bundle.variants || []).map((v, i) => {
+    const vr = validateGrafcetStructure(v);
+    const cmp = (baseV.signature && vr.signature)
+      ? compareSignatures(baseV.signature, vr.signature)
+      : { isomorphic: false, score: 0, detail: 'sin firma' };
+    return { i: i + 1, name: (v && v.name) || ('Variante ' + (i + 1)), vr, cmp };
+  });
+  return { baseV, variantResults };
+}
+
+function renderValidationReport(bundle, result) {
+  const report = document.getElementById('isoReport');
+  report.style.display = 'block';
+  let h = '';
+
+  h += '<p><strong>Base</strong> — validación estructural: ' +
+    (result.baseV.ok ? '<span style="color:var(--inv)">OK</span>' : '<span style="color:var(--warn)">ERRORES</span>') + '</p>';
+  if (result.baseV.errors.length) h += '<ul>' + result.baseV.errors.map(e => '<li style="color:var(--warn)">' + esc(e) + '</li>').join('') + '</ul>';
+  if (result.baseV.warnings.length) h += '<ul>' + result.baseV.warnings.map(e => '<li style="color:var(--amber)">' + esc(e) + '</li>').join('') + '</ul>';
+  h += '<p style="font-size:12px;color:var(--muted)">Firma: <code>' + esc(result.baseV.signature || '') + '</code></p>';
+
+  h += '<table class="data" style="width:100%;margin-top:12px;font-size:13px"><thead><tr><th>Variante</th><th>Estructura</th><th>Isomorfía</th><th>Score</th><th>Detalle</th></tr></thead><tbody>';
+  result.variantResults.forEach(v => {
+    const st = v.vr.ok ? 'OK' : 'Error';
+    const iso = v.cmp.isomorphic ? 'SÍ' : (v.cmp.score >= 70 ? 'PARCIAL' : 'NO');
+    const col = v.cmp.isomorphic ? 'var(--inv)' : (v.cmp.score >= 70 ? 'var(--amber)' : 'var(--warn)');
+    h += '<tr><td>' + esc(v.name) + '</td><td>' + st +
+      (v.vr.errors.length ? ' (' + v.vr.errors.length + ' err)' : '') +
+      '</td><td style="color:' + col + ';font-weight:700">' + iso + '</td><td>' + v.cmp.score +
+      '</td><td style="font-size:12px">' + esc(v.cmp.detail) +
+      (v.vr.errors.length ? '<br>' + esc(v.vr.errors.join('; ')) : '') +
+      '</td></tr>';
+  });
+  h += '</tbody></table>';
+
+  const box = document.getElementById('profileBox');
+  box.style.display = 'block';
+  let diag = grafcetDiagram(result.baseV.g || bundle.base) + '\\n\\n---\\n\\n';
+  (bundle.variants || []).forEach((v, i) => {
+    try { diag += grafcetDiagram(v) + '\\n\\n'; }
+    catch (e) { diag += 'Variante ' + (i + 1) + ': ' + e.message + '\\n\\n'; }
+  });
+  box.textContent = diag;
+
+  report.innerHTML = h;
+}
+
+function validateJsonPaste() {
+  const raw = document.getElementById('grafcetJson').value.trim();
+  if (!raw) { alert('Pega un JSON GRAFCET primero.'); return; }
+  try {
+    const bundle = parseGrafcetBundle(raw);
+    const result = runValidationOnBundle(bundle);
+    renderValidationReport(bundle, result);
+    document.getElementById('valStatus').innerHTML =
+      '<div class="msg msg-ok"><i class="ti ti-check"></i> Validación ejecutada solo con código (sin nueva llamada IA).</div>';
+  } catch (e) {
+    document.getElementById('valStatus').innerHTML =
+      '<div class="msg msg-warn"><i class="ti ti-alert-triangle"></i> ' + esc(e.message) + '</div>';
+  }
+}
+
+async function validateGrafcetReal() {
+  const base = document.getElementById('baseText').value.trim();
+  const result = document.getElementById('resultText').value.trim() || lastResult;
+  const key = document.getElementById('apiKey').value.trim();
+  if (!base) { alert('Falta enunciado base.'); go(0); return; }
+  if (!result) { alert('Genera primero los enunciados isomorfos.'); go(2); return; }
+  if (!key) { alert('API key necesaria para proponer el JSON GRAFCET (luego valida el código).'); return; }
+
+  const btn = document.getElementById('btnValidate');
+  const status = document.getElementById('valStatus');
+  btn.disabled = true;
+  status.innerHTML = '<div class="msg msg-info"><i class="ti ti-loader"></i> La IA propone GRAFCET JSON; el código validará estructura e isomorfía…</div>';
+
+  const prompt = `Eres experto en GRAFCET (IEC 60848). A partir del enunciado BASE y de los PROBLEMAS GENERADOS, construye modelos GRAFCET formales.
+
+Responde ÚNICAMENTE con un JSON válido (sin markdown, sin \`\`\`) con esta forma exacta:
+{
+  "base": {
+    "id": "base",
+    "name": "string",
+    "steps": [ { "id": "E0", "initial": true, "actions": ["M1"] }, { "id": "E1", "initial": false, "actions": [] } ],
+    "transitions": [ { "id": "T0", "from": "E0", "to": "E1", "condition": "PM AND S1", "link": "seq" } ]
+  },
+  "variants": [ { ... mismo esquema ... } ]
+}
+
+Reglas:
+- Exactamente una etapa con "initial": true por GRAFCET.
+- "from" y "to" pueden ser string o array de strings (para OR/AND).
+- "link": "seq" | "or" | "and".
+- Las variantes deben ser ISOMORFAS al base (misma topología; pueden cambiar nombres de etapas, sensores y actuadores).
+- Incluye una variante en "variants" por cada problema generado detectable en el texto.
+- No inventes etapas que el enunciado no justifique.
+
+ENUNCIADO BASE:
+"""
+${base.slice(0, 10000)}
+"""
+
+PROBLEMAS GENERADOS:
+"""
+${result.slice(0, 18000)}
+"""`;
+
+  try {
+    const provider = document.getElementById('aiProvider').value;
+    const model = document.getElementById('aiModel').value.trim();
+    let text = await callAI(provider, model, key, prompt);
+    // strip fences if any
+    text = text.replace(/^```json\\s*/i, '').replace(/^```\\s*/i, '').replace(/\\s*```$/i, '').trim();
+    document.getElementById('grafcetJson').value = text;
+
+    const bundle = parseGrafcetBundle(text);
+    const val = runValidationOnBundle(bundle);
+    renderValidationReport(bundle, val);
+
+    const allIso = val.variantResults.every(v => v.cmp.isomorphic && v.vr.ok);
+    const anyErr = !val.baseV.ok || val.variantResults.some(v => !v.vr.ok);
+    status.innerHTML = allIso
+      ? '<div class="msg msg-ok"><i class="ti ti-check"></i> Estructura OK e isomorfía estructural SÍ en todas las variantes (según firma canónica).</div>'
+      : '<div class="msg msg-amber"><i class="ti ti-alert-triangle"></i> Validación terminada: revisa errores o isomorfía parcial/no en la tabla.' +
+        (anyErr ? ' Hay errores estructurales que el código ha marcado.' : '') + '</div>';
+  } catch (e) {
+    status.innerHTML = '<div class="msg msg-warn"><i class="ti ti-alert-triangle"></i> ' + esc(e.message) + '</div>';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function downloadValidation() {
+  const json = document.getElementById('grafcetJson').value || '';
+  const reportTxt = document.getElementById('isoReport').innerText || '';
+  const diag = document.getElementById('profileBox').textContent || '';
+  const body = '# IsomorfIA — validación GRAFCET\\n\\n## Informe\\n\\n' + reportTxt +
+    '\\n\\n## Diagramas\\n\\n' + diag + '\\n\\n## JSON\\n\\n```json\\n' + json + '\\n```\\n';
+  const blob = new Blob([body], { type: 'text/markdown;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'isomorfia_grafcet_validacion.md';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+// compat aliases
+function validateIsomorphy() { return validateGrafcetReal(); }
+function validateLocalOnly() {
+  document.getElementById('valStatus').innerHTML =
+    '<div class="msg msg-info"><i class="ti ti-info-circle"></i> Usa «Validar JSON pegado» tras tener JSON, o «Extraer GRAFCET + validar».</div>';
+}
+
+
+async function callAI(provider, model, key, prompt) {
+  if (provider === 'google') {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model || 'gemini-2.0-flash'}:generateContent?key=${encodeURIComponent(key)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.7, maxOutputTokens: 8192 }
+      })
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const data = await res.json();
+    return data.candidates[0].content.parts.map(p => p.text || '').join('');
+  }
+  if (provider === 'openai') {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
+      body: JSON.stringify({
+        model: model || 'gpt-4o-mini',
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.7
+      })
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return (await res.json()).choices[0].message.content;
+  }
+  if (provider === 'anthropic') {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: model || 'claude-3-5-haiku-20241022',
+        max_tokens: 8000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return (await res.json()).content[0].text;
+  }
+  throw new Error('Proveedor no soportado');
+}
+
+function renderPreview() {
+  const raw = document.getElementById('resultText').value;
+  lastResult = raw;
+  document.getElementById('preview').innerHTML = simpleMarkdown(raw);
+}
+
+document.getElementById('resultText')?.addEventListener('input', () => {
+  lastResult = document.getElementById('resultText').value;
+  document.getElementById('preview').innerHTML = simpleMarkdown(lastResult);
+});
+
+function simpleMarkdown(md) {
+  let h = esc(md);
+  h = h.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  h = h.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+  h = h.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+  h = h.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+  h = h.replace(/^- (.+)$/gm, '<li>$1</li>');
+  h = h.replace(/(<li>.*<\/li>\n?)+/g, m => '<ul>' + m + '</ul>');
+  h = h.replace(/\n\n/g, '<br><br>');
+  return h;
+}
+
+function downloadMd() {
+  const text = document.getElementById('resultText').value || lastResult;
+  const blob = new Blob([text], { type: 'text/markdown;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'enunciados_isomorfos.md';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+async function copyResult() {
+  const text = document.getElementById('resultText').value || lastResult;
+  try {
+    await navigator.clipboard.writeText(text);
+    alert('Copiado al portapapeles.');
+  } catch {
+    alert('No se pudo copiar; selecciona el texto manualmente.');
+  }
+}
+
+function esc(t) {
+  return String(t ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>

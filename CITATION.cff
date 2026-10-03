@@ -1,0 +1,27 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+type: software
+title: "IsomorfIA"
+abstract: "Generación de enunciados de problemas isomorfos a partir de un enunciado base (p. ej. Automatización Industrial / GRAFCET). Estilo formal, semi-informal o muy informal; opción de variar nombres de variables. Idea original de Ramón Ñeco García; implementación Forja."
+authors:
+  - family-names: "Ñeco García"
+    given-names: "Ramón"
+    orcid: "https://orcid.org/0000-0002-4338-3692"
+    affiliation: "Universidad Miguel Hernández de Elche"
+  - family-names: "Borrás Rocher"
+    given-names: "Fernando"
+    orcid: "https://orcid.org/0000-0002-5519-4573"
+    affiliation: "Universidad Miguel Hernández de Elche"
+license: MIT
+version: "0.3.0"
+date-released: "2026-10-03"
+url: "https://fborrasumh.github.io/isomorfia/"
+repository-code: "https://github.com/fborrasumh/isomorfia"
+keywords:
+  - isomorphic-problems
+  - GRAFCET
+  - industrial-automation
+  - assessment
+  - teaching
+  - UMH
+  - browser-based
